@@ -1,0 +1,2 @@
+# BMM
+Bernoulli Mixture Models
