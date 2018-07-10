@@ -170,7 +170,7 @@ void log_z_nk(Dataset* ds, double** z, double* pis, double** protos, int K) {
     // normalize by dividing by rowsums
     for (int k = 0; k < K; k++) {
       z[n][k] -= rowsum;
-      z[n][k] = clip(exp(z[n][k]));
+      z[n][k] = exp(z[n][k]);
     }
     
   }
