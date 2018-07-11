@@ -12,7 +12,7 @@ void free_bmm_em_result(bmm_em_result* x) {
   free(x->protos);
   free(x->cluster);
   
-}; 
+}
 
 bmm_em_result em(Dataset* ds, int K, int max_iter, int verbose) {
   
@@ -112,7 +112,7 @@ bmm_em_result em(Dataset* ds, int K, int max_iter, int verbose) {
   Rprintf("Exit\n");
   return result;
   
-};
+}
 
 double clip(double x) {
   double lo = 0.000000001;
@@ -124,7 +124,7 @@ double clip(double x) {
     x = hi;
   }
   return x;
-};
+}
 
 // likelihood of xn given cluster k
 double log_p_xn_k(Dataset* ds, int row, double* proto) {
@@ -141,7 +141,7 @@ double log_p_xn_k(Dataset* ds, int row, double* proto) {
   }
   return ll;
   
-};
+}
 
 void log_z_nk(Dataset* ds, double** z, double* pis, double** protos, int K) {
   
@@ -175,9 +175,7 @@ void log_z_nk(Dataset* ds, double** z, double* pis, double** protos, int K) {
     
   }
   
-  
-  
-};
+}
 
 void p_k(double* pis, double** z, int K, int N) {
   
@@ -195,7 +193,7 @@ void p_k(double* pis, double** z, int K, int N) {
     
   }
   
-};
+}
 
 void proto_k(Dataset* ds, double** z, double* proto, int k) {
   
@@ -214,7 +212,7 @@ void proto_k(Dataset* ds, double** z, double* proto, int k) {
     proto[i] = clip(num / den);
     
   }
-};
+}
 
 double loglik(Dataset* ds, double** z, double* pis, double** protos, int K) {
   
@@ -231,7 +229,7 @@ double loglik(Dataset* ds, double** z, double* pis, double** protos, int K) {
   
   return ll;
   
-};
+}
 
 double* sample_pis(int K) {
   
@@ -241,7 +239,7 @@ double* sample_pis(int K) {
     pis[k] = 1.0/K;
   }
   return pis;
-};
+}
 
 double** sample_prototypes(Dataset* ds, int K)  {
   
@@ -329,4 +327,4 @@ SEXP convert_bmm_em_result(Dataset* ds, bmm_em_result * res, int* prtCnt) {
   
   return out;
   
-};
+}
