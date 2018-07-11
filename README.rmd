@@ -1,0 +1,114 @@
+---
+title: "Bernoulli Mixture Models"
+output: md_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(cache = FALSE)
+library(BMM)
+```
+
+## Bernoulli Mixture Models
+
+This package provides a fast implementation modelling a mixture of multivariate bernoulli samples.
+Expectation Maximization is used to find the multivariate bernoulli prototypes and their mixture weights
+that maximize the likelihood of the data.
+
+The main function, `BMM`, works with both dense matrices and sparse, pattern matrices from the `Matrix`
+package that ships with most installations of `R`
+
+### Example Usage
+
+We will first train a model on synthetic data generated from two very specific prototypes and mixing
+weights. It is our hope that given the generated data, the model can uncover the prototypes and mixing
+weights.
+
+```{r make_data}
+P1 <- c(0.9, 0.9, 0.9, 0.1, 0.1)
+P2 <- c(0.1, 0.1, 0.9, 0.9, 0.9)
+
+prototypes <- list(P1, P2)
+weights <- c(0.25, 0.75)
+
+x <- t(replicate(1000, {
+  
+  ## pick a random prototype
+  i <- sample(1:2, size = 1, prob =  weights)
+  
+  ## sample bits from the chosen prototype
+  sapply(prototypes[[i]], function(p) rbinom(1, 1, p))
+  
+}))
+
+head(x)
+```
+
+## Training a BMM 
+
+To train a BMM model invoke the BMM method passing the binary matrix of data, the number of clusters to model, the maximum number of EM updates, and whether to print training information to the console:
+
+```{r training, echo=TRUE}
+set.seed(1234)
+res <- BMM(data = x, K = 2L, max.iter = 20L, verbose = 1L)
+```
+
+At each iteration, the model will print the log likelihood if the verbose option is requested. The model will stop training after convergence or the max number of iterations is reached, whichever happens first. A model converges when the log likelihood no longer updates.
+
+Once the model finishes training it will return a list with three elements:
+
+1. prototypes - contains a `K x ncol(data)` matrix where each row represents one of the learned prototoypes.
+2. pis - A numeric vector of length K containing the mixing weights
+3. cluster - An integer vector of length `nrow(data)` indicating which prototype was most  likely to have generated each data point.
+
+```{r}
+## Multivariate Bernoulli prototypes
+print(round(res$prototypes, 2))
+
+## mixing weights
+print(round(res$pis, 2))
+```
+
+These results are very similar to the prototypes and mixing weights used to generate the dataset!
+
+## MNIST
+
+What about something a little more interesting? The following example trains a BMM on a sample of the
+famous MNIST, hand-written digit dataset.
+
+
+```{r mnist, cache=TRUE}
+url <- "http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz"
+tmp <- tempfile()
+download.file(url, tmp)
+to.read <- gzfile(tmp, open = "rb")
+
+## file header info
+readBin(to.read, what=integer(), n=4, endian="big")
+
+images <- sapply(seq.int(10000), function(x) {
+  readBin(to.read,integer(), size=1, n=28*28, endian="big")
+})
+
+close(to.read)
+
+d <- t(images)
+d <- (d < 0) + 0L ## binarize
+
+res <- BMM(d, K=12L, max.iter = 50L, verbose = 0L)
+```
+
+
+### Visualizing Prototypes
+
+With the BMM trained on the MNIST data we can now visualize the prototypes to see what the model uncovered:
+
+```{r images, fig.align="center"}
+par(mfrow=c(4,3))
+par(mar=c(0,0,0,0))
+for (i in seq.int(10)) {
+  image(matrix(res$prototypes[i,], 28, 28)[,28:1], axes=F)
+}
+par(mfrow=c(1,1))
+```
+

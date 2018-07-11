@@ -37,3 +37,21 @@ for (i in seq.int(25)) {
 }
 par(mfrow=c(1,1))
 
+
+
+data(titanic, package="onyx")
+library(isofor)
+
+iso <- iForest(titanic[-1], nt = 100, phi=8)
+nodes <- predict(iso, titanic[-1], sparse=T)
+nodes <- as(as(nodes, "nsparseMatrix"), "ngCMatrix")
+
+bmm <- BMM(nodes, K=10L, max.iter = 100L, verbose = 1L)
+
+tapply(titanic$Survived, bmm$cluster, mean)
+
+
+library(spamming)
+
+dst <- as.dist(spamming(nodes))
+cl <- hclust(dst)

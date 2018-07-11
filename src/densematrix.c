@@ -24,8 +24,8 @@ static int DenseMatrix_at_(Dataset const * const me, int n, int d) {
   DenseMatrix const * const m = (DenseMatrix const *) me; // Explicit downcast
   
   // bounds check
-  assert(n <= m->super.N && n >= 0);
-  assert(d <= m->super.D && d >= 0);
+  // assert(n <= m->super.N && n >= 0);
+  // assert(d <= m->super.D && d >= 0);
   
   return m->_data[d * m->super.N + n];
   

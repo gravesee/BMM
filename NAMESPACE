@@ -2,5 +2,6 @@
 
 export(BMM)
 export(test_dense_matrix)
+export(test_sparse_matrix)
 exportMethods(BMM)
 useDynLib("BMM", .registration = TRUE, .fixes = "C_")
