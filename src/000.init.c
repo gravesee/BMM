@@ -6,7 +6,9 @@
 
 static R_CallMethodDef callMethods[] = {
   {"test_dense_matrix", (DL_FUNC) &test_dense_matrix, 3},
+  {"test_sparse_matrix", (DL_FUNC) &test_sparse_matrix, 4},
   {"bmm_dense_matrix", (DL_FUNC) &bmm_dense_matrix, 6},
+  {"bmm_sparse_matrix", (DL_FUNC) &bmm_sparse_matrix, 7},
   {NULL, NULL, 0}
 };
 

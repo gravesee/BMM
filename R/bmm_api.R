@@ -15,3 +15,20 @@ setMethod(
     res
     
   })
+
+
+#' @export
+setMethod(
+  "BMM",
+  c("ngCMatrix", "integer", "integer", "integer"),
+  function(data, K, max.iter, verbose) {
+    
+    
+    res <- .Call(C_bmm_sparse_matrix, data@p, data@i, nrow(data), ncol(data),
+                 as.integer(K), as.integer(max.iter), as.integer(verbose))
+    
+    res$prototypes <- t(res$prototypes)
+    
+    res
+    
+  })

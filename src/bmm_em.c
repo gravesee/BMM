@@ -2,6 +2,7 @@
 #include "float.h"
 #include "Rinternals.h"
 #include "R.h"
+#include <omp.h>
 
 void free_bmm_em_result(bmm_em_result* x) {
   
@@ -16,16 +17,11 @@ void free_bmm_em_result(bmm_em_result* x) {
 
 bmm_em_result em(Dataset* ds, int K, int max_iter, int verbose) {
   
-  
-  Rprintf("Starting EM\n");
-  Rprintf("DS access: (1,1) = (%d)\n", at(ds, 0,0));
-  Rprintf("Allocating protos\n");
-  double** protos = sample_prototypes(ds, K);
-  
-  Rprintf("Allocating pis\n");
+  /** Allocate space **/
+    
+  //double** protos = sample_prototypes(ds, K);
+  double** protos = sample_prototypes_hypercube(ds, K);
   double* pis = sample_pis(K);
-  
-  Rprintf("Allocating z\n");
   double** z = alloc_z(ds->N, K, ds->D);
   
   double thresh = 1e-6;
@@ -34,26 +30,19 @@ bmm_em_result em(Dataset* ds, int K, int max_iter, int verbose) {
   double ll = -DBL_MAX;
   int iter = 0;
   
-  Rprintf("Entering while loop\n");
   while (iter < max_iter && !converged) {
     prev = ll;
     ll = 0;
     
-    // Expectation
-    Rprintf("log_z_nk\n");
-    log_z_nk(ds, z, pis, protos, K);
+    // Expectation & log likelihood
+    ll = log_z_nk(ds, z, pis, protos, K);
     
-    // Calculate log likelihood
-    Rprintf("loglik\n");
-    ll = loglik(ds, z, pis, protos, K);
-    Rprintf("ll = %f\n", ll);
     
     if (verbose) {
       Rprintf(" %4d | %15.4f\n", iter, ll);
     }
     
     // Check converged
-    Rprintf("Check convergence\n");
     if (ll - prev < thresh) {
       converged = 1;
       if (verbose) {
@@ -63,10 +52,8 @@ bmm_em_result em(Dataset* ds, int K, int max_iter, int verbose) {
     
     
     // M-Step /////////////
-    Rprintf("p_k\n");
     p_k(pis, z, K, ds->N);
     
-    Rprintf("proto_k\n");
     for (int k = 0; k < K; k++) {
       proto_k(ds, z, protos[k], k);
     }
@@ -76,10 +63,8 @@ bmm_em_result em(Dataset* ds, int K, int max_iter, int verbose) {
   }
   
   // get cluster
-  Rprintf("Allocating cluster\n");
   int * cluster = (int*) calloc(ds->N, sizeof(int));
   
-  Rprintf("Assigning cluster\n");
   for (int n = 0; n < ds->N; n++) {
     
     double max = 0;
@@ -93,13 +78,11 @@ bmm_em_result em(Dataset* ds, int K, int max_iter, int verbose) {
   }
   
   // free everything
-  Rprintf("Free Z\n");
   for (int n = 0; n < ds->N; n++) {
     free(z[n]);
   }
   free(z);
   
-  Rprintf("Create bmm_em_result\n");
   bmm_em_result result = {
     .protos = protos,
     .pis = pis,
@@ -109,14 +92,13 @@ bmm_em_result em(Dataset* ds, int K, int max_iter, int verbose) {
     .ll = ll
   };
   
-  Rprintf("Exit\n");
   return result;
   
 }
 
 double clip(double x) {
   double lo = 0.000000001;
-  double hi = 0.999999999; 
+  double hi = 0.999999999;
   
   if (x < lo) {
     x = lo;
@@ -134,8 +116,8 @@ double log_p_xn_k(Dataset* ds, int row, double* proto) {
   
   for (int i = 0; i < ds->D; i++) {
     
-    //mu = clip(proto[i]);
-    mu = proto[i];
+    mu = clip(proto[i]);
+    //mu = proto[i];
     
     ll += at(ds, row, i) ? log(mu) : log(1 - mu);
   }
@@ -143,14 +125,22 @@ double log_p_xn_k(Dataset* ds, int row, double* proto) {
   
 }
 
-void log_z_nk(Dataset* ds, double** z, double* pis, double** protos, int K) {
+double log_z_nk(Dataset* ds, double** z, double* pis, double** protos, int K) {
   
+  double ll = 0; 
+  double * tmp;
+  
+  #pragma omp parallel for private(tmp) reduction (+:ll)
   for (int n = 0; n < ds->N; n++) {
     
+    tmp = (double*) malloc(K * sizeof(double));
     double max = -DBL_MAX;
     
     for (int k = 0; k < K; k++) {
-      z[n][k] = log(pis[k]) + log_p_xn_k(ds, n, protos[k]);
+      
+      tmp[k] = log(pis[k]) + log_p_xn_k(ds, n, protos[k]);
+      
+      z[n][k] = tmp[k];
     
       // Keep track of the max for logsumexp trick  
       if (z[n][k] > max) {
@@ -165,15 +155,20 @@ void log_z_nk(Dataset* ds, double** z, double* pis, double** protos, int K) {
     }
     
     rowsum = max + log(rowsum);
-      
     
     // normalize by dividing by rowsums
     for (int k = 0; k < K; k++) {
       z[n][k] -= rowsum;
       z[n][k] = exp(z[n][k]);
+      
+      ll += z[n][k] * tmp[k];
+  
     }
-    
+      
+    free(tmp);
   }
+    
+  return ll;
   
 }
 
@@ -188,7 +183,7 @@ void p_k(double* pis, double** z, int K, int N) {
       
     }
     
-    // make sure pis are not zero or 1
+    // make sure pis are not zero or one
     pis[k] /= N;
     
   }
@@ -197,6 +192,7 @@ void p_k(double* pis, double** z, int K, int N) {
 
 void proto_k(Dataset* ds, double** z, double* proto, int k) {
   
+  #pragma omp parallel for shared(proto, z)
   for (int i = 0; i < ds->D; i++) {
     
     double num = 0;
@@ -239,6 +235,30 @@ double* sample_pis(int K) {
     pis[k] = 1.0/K;
   }
   return pis;
+}
+
+
+double** sample_prototypes_hypercube(Dataset* ds, int K)  {
+  
+  double** protos = (double**) calloc(K, sizeof(double*));
+  for (int k = 0; k < K; k++) {
+    protos[k] = (double*) calloc(ds->D, sizeof(double));
+  }
+  
+  // randomly sample a row from x 
+  for (int k = 0; k < K; k++) {
+    
+    // loop over bits
+    for (int i = 0; i < ds->D; i++) {
+      GetRNGstate();
+      double rand = (unif_rand() - 0.50) * 1e-2;
+      PutRNGstate();
+      
+      protos[k][i] = 0.50 + rand;
+      
+    }
+  }
+  return protos;
 }
 
 double** sample_prototypes(Dataset* ds, int K)  {
