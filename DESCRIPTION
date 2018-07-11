@@ -7,6 +7,6 @@ Author: Eric E. Graves
 Maintainer: Eric E. Graves <gravcon5@gmail.com>
 Description: Uncover latent prototypes and mixing weights within dense or sparse
     multivariate bernoulli datasets.
-License: GPL (>= 2)
+License: MIT
 Depends: Matrix
 RoxygenNote: 6.0.1
