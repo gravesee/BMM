@@ -80,3 +80,66 @@ SEXP bmm_sparse_matrix(SEXP p, SEXP i, SEXP n, SEXP d, SEXP K, SEXP max_iter, SE
 } 
 
 
+SEXP predict_dense_matrix(SEXP m, SEXP protos, SEXP pis, SEXP n, SEXP d, SEXP K) {
+  
+  int _K = asInteger(K);
+  int _d = asInteger(d);
+  int _n = asInteger(n);
+  
+  DenseMatrix x;
+  DenseMatrix_ctor(&x, m, _n, _d);
+  
+  // Must pass transposed protos from R!
+  double ** _protos = (double **) malloc(_K * _d * sizeof(double*));
+  for (int k = 0; k < _K; k++) {
+    _protos[k] = &REAL(protos)[k * _d];
+  }
+  
+  znk_result res = predict_log_z_nk(&x.super, REAL(pis), _protos, _K);
+  
+  // Pass pointer to keep track of R protect uses
+  // Convert to SEXP to return to R
+  int prtCnt = 0;
+  SEXP out = convert_znk_result(&x.super, &res, &prtCnt);
+  
+  free_znk_result(&res);
+  free(_protos);
+  
+  UNPROTECT(prtCnt);
+  
+  return out;
+} 
+
+
+SEXP predict_sparse_matrix(SEXP p, SEXP i, SEXP protos, SEXP pis, SEXP n, SEXP d, SEXP K) {
+  
+  int _K = asInteger(K);
+  int _n = asInteger(n);
+  int _d = asInteger(d);
+  
+  SparseMatrix x;
+  SparseMatrix_ctor(&x, INTEGER(p), INTEGER(i), _n, _d);
+  
+  // Must pass transposed protos from R!
+  double ** _protos = (double **) malloc(_K * _d * sizeof(double*));
+  for (int k = 0; k < _K; k++) {
+    _protos[k] = &REAL(protos)[k * _d];
+  }
+  
+  znk_result res = predict_log_z_nk(&x.super, REAL(pis), _protos, _K);
+  
+  // Pass pointer to keep track of R protect uses
+  // Convert to SEXP to return to R
+  int prtCnt = 0;
+  SEXP out = convert_znk_result(&x.super, &res, &prtCnt);
+  
+  free_znk_result(&res);
+  free(_protos);
+  
+  UNPROTECT(prtCnt);
+  
+  return out;
+} 
+
+
+

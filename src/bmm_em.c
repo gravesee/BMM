@@ -48,6 +48,7 @@ bmm_em_result em(Dataset* ds, int K, int max_iter, int verbose) {
       if (verbose) {
         Rprintf("-- Converged --\n");
       }
+      break;
     }
     
     
@@ -156,14 +157,19 @@ double log_z_nk(Dataset* ds, double** z, double* pis, double** protos, int K) {
     
     rowsum = max + log(rowsum);
     
+    //Rprintf("z[n][k]=");
+    
     // normalize by dividing by rowsums
     for (int k = 0; k < K; k++) {
       z[n][k] -= rowsum;
       z[n][k] = exp(z[n][k]);
       
+      //Rprintf(" %f", z[n][k]);
+      
       ll += z[n][k] * tmp[k];
   
     }
+    //Rprintf("\n");
       
     free(tmp);
   }
@@ -219,7 +225,7 @@ double loglik(Dataset* ds, double** z, double* pis, double** protos, int K) {
     for (int k = 0; k < K; k++) {
       
       ll += z[n][k] * (log(pis[k]) + log_p_xn_k(ds, n, protos[k]));
-      //Rprintf("z[n][k]= %f\n", z[n][k]);
+      ////Rprintf("z[n][k]= %f\n", z[n][k]);
     }
   }
   
@@ -343,6 +349,71 @@ SEXP convert_bmm_em_result(Dataset* ds, bmm_em_result * res, int* prtCnt) {
   SET_STRING_ELT(names, 0, Rf_mkChar("prototypes"));
   SET_STRING_ELT(names, 1, Rf_mkChar("pis"));
   SET_STRING_ELT(names, 2, Rf_mkChar("cluster"));
+  Rf_setAttrib(out, R_NamesSymbol, names);
+  
+  return out;
+  
+}
+
+znk_result predict_log_z_nk(Dataset *ds, double* pis, double** protos, int K) {
+  
+  double** z = alloc_z(ds->N, K, ds->D);
+  
+  double ll = 0;
+  
+  for (int n = 0; n < ds->N; n++) {
+    
+    for (int k = 0; k < K; k++) {
+      
+      z[n][k] = log_p_xn_k(ds, n, protos[k]);
+      
+    }
+    
+  }
+
+  znk_result res = {.z = z, .ll = ll, .K = K};
+  
+  return (res);
+  
+};
+
+void free_znk_result(znk_result* x) {
+  for (int k = 0; k < x->K; k++) {
+    free(x->z[k]);
+  }
+  free(x->z);
+};
+
+
+SEXP convert_znk_result(Dataset* ds, znk_result * res, int* prtCnt) {
+  
+  SEXP out = PROTECT(Rf_allocVector(VECSXP, 2));
+  (*prtCnt)++;
+  
+  SEXP znk = PROTECT(Rf_allocMatrix(REALSXP, ds->N, res->K));
+  (*prtCnt)++;
+  
+  SEXP ll = PROTECT(Rf_allocVector(REALSXP, 1));
+  (*prtCnt)++;
+  
+  // TODO: change iteration to avoid tranposing on back end
+  // copy data to R vectors
+  for (int n = 0; n < ds->N; n++) {
+    for (int k = 0; k < res->K; k++) {
+    REAL(znk)[k * ds->N + n] = res->z[n][k];
+    }
+  }
+  
+  REAL(ll)[0] = res->ll;
+  
+  SEXP names = PROTECT(Rf_allocVector(STRSXP, 2));
+  (*prtCnt)++;
+  
+  SET_VECTOR_ELT(out, 0, znk);
+  SET_VECTOR_ELT(out, 1, ll);
+  
+  SET_STRING_ELT(names, 0, Rf_mkChar("z"));
+  SET_STRING_ELT(names, 1, Rf_mkChar("ll"));
   Rf_setAttrib(out, R_NamesSymbol, names);
   
   return out;

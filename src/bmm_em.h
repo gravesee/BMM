@@ -14,6 +14,12 @@ typedef struct {
   double ll;
 } bmm_em_result;
 
+typedef struct {
+  double ** z;
+  double ll;
+  int K;
+} znk_result;
+
 void free_bmm_em_result(bmm_em_result* x);
 
 bmm_em_result em(Dataset* ds, int K, int max_iter, int verbose);
@@ -38,7 +44,13 @@ double** sample_prototypes_hypercube(Dataset* ds, int K);
 
 double** alloc_z(int N, int K, int D);
 
+znk_result predict_log_z_nk(Dataset *ds, double* pis, double** protos, int K);
+
+void free_znk_result(znk_result* x);
+
 SEXP convert_bmm_em_result(Dataset* ds, bmm_em_result * res, int * prtCnt);
+
+SEXP convert_znk_result(Dataset* ds, znk_result* res, int * prtCnt);
 
 #endif /* BMM_EM_H */
 

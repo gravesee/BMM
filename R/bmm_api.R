@@ -32,3 +32,24 @@ setMethod(
     res
     
   })
+
+
+predict_dense_matrix <- function(data, protos, pis) {
+  
+  ## check everything makes sense here
+  res <- .Call(C_predict_dense_matrix, data, t(protos), pis, nrow(data), ncol(data), length(pis))
+  
+  res
+  
+}
+
+
+predict_sparse_matrix <- function(data, protos, pis) {
+  
+  ## check everything makes sense here
+  res <- .Call(C_predict_sparse_matrix, data@p, data@i, t(protos), pis, nrow(data), ncol(data), length(pis))
+  
+  res
+  
+}
+

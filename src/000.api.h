@@ -11,3 +11,6 @@ SEXP bmm_dense_matrix(SEXP m, SEXP n, SEXP d, SEXP K, SEXP max_iter, SEXP verbos
 
 SEXP bmm_sparse_matrix(SEXP p, SEXP i, SEXP n, SEXP d, SEXP K, SEXP max_iter, SEXP verbose);
 
+SEXP predict_dense_matrix(SEXP m, SEXP protos, SEXP pis, SEXP n, SEXP d, SEXP K);
+
+SEXP predict_sparse_matrix(SEXP p, SEXP i, SEXP protos, SEXP pis, SEXP n, SEXP d, SEXP K);
