@@ -1,14 +1,14 @@
 #' @export
-setGeneric("BMM", function(data, K, max.iter=10L, verbose=1L) standardGeneric("BMM"))
+setGeneric("BMM", function(data, K, max.iter=10L, verbose=1L, hbbmm=1L) standardGeneric("BMM"))
 
 #' @export
 setMethod(
   "BMM",
-  c("matrix", "integer", "integer", "integer"),
-  function(data, K, max.iter, verbose) {
+  c("matrix", "integer", "integer", "integer", "integer"),
+  function(data, K, max.iter, verbose, hbbmm) {
     
     res <- .Call(C_bmm_dense_matrix, data, nrow(data), ncol(data),
-          as.integer(K), as.integer(max.iter), as.integer(verbose))
+          as.integer(K), as.integer(max.iter), as.integer(verbose), as.integer(hbbmm))
     
     res$prototypes <- t(res$prototypes)
     
@@ -20,12 +20,12 @@ setMethod(
 #' @export
 setMethod(
   "BMM",
-  c("ngCMatrix", "integer", "integer", "integer"),
-  function(data, K, max.iter, verbose) {
+  c("ngCMatrix", "integer", "integer", "integer", "integer"),
+  function(data, K, max.iter, verbose, hbbmm) {
     
     
     res <- .Call(C_bmm_sparse_matrix, data@p, data@i, nrow(data), ncol(data),
-                 as.integer(K), as.integer(max.iter), as.integer(verbose))
+                 as.integer(K), as.integer(max.iter), as.integer(verbose), as.integer(hbbmm))
     
     res$prototypes <- t(res$prototypes)
     

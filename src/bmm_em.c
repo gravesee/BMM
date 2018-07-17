@@ -4,6 +4,7 @@
 #include "R.h"
 #include <omp.h>
 
+
 void free_bmm_em_result(bmm_em_result* x) {
   
   free(x->pis);
@@ -15,7 +16,7 @@ void free_bmm_em_result(bmm_em_result* x) {
   
 }
 
-bmm_em_result em(Dataset* ds, int K, int max_iter, int verbose) {
+bmm_em_result em(Dataset* ds, int K, int max_iter, int verbose, int hbbmm) {
   
   /** Allocate space **/
     
@@ -24,6 +25,11 @@ bmm_em_result em(Dataset* ds, int K, int max_iter, int verbose) {
   double* pis = sample_pis(K);
   double** z = alloc_z(ds->N, K, ds->D);
   
+  // calculate alpha and beta estimates
+  double alpha, beta;
+  empirical_bayes(ds, &alpha, &beta);
+  
+
   double thresh = 1e-6;
   int converged = 0;
   double prev = 0;
@@ -55,8 +61,14 @@ bmm_em_result em(Dataset* ds, int K, int max_iter, int verbose) {
     // M-Step /////////////
     p_k(pis, z, K, ds->N);
     
+    // Pass alpha and beta here
     for (int k = 0; k < K; k++) {
-      proto_k(ds, z, protos[k], k);
+      
+      if (hbbmm) {
+        proto_k_hbbmm(ds, z, protos[k], k, alpha, beta);
+      } else {
+        proto_k(ds, z, protos[k], k);
+      }
     }
     // End M-Step /////////
     
@@ -215,6 +227,28 @@ void proto_k(Dataset* ds, double** z, double* proto, int k) {
     
   }
 }
+
+void proto_k_hbbmm(Dataset* ds, double** z, double* proto, int k, double alpha, double beta) {
+  
+#pragma omp parallel for shared(proto, z)
+  for (int i = 0; i < ds->D; i++) {
+    
+    double num = 0;
+    double den = 0;
+    
+    for (int n = 0; n < ds->N; n++) {
+      
+      num += z[n][k] * at(ds, n, i);
+      den += z[n][k];
+      
+    }
+    
+    //proto[i] = clip( (num  / den);
+    proto[i] = (num + alpha - 1.0) / (den + alpha + beta - 2.0);
+    
+  }
+}
+
 
 double loglik(Dataset* ds, double** z, double* pis, double** protos, int K) {
   
@@ -419,3 +453,51 @@ SEXP convert_znk_result(Dataset* ds, znk_result * res, int* prtCnt) {
   return out;
   
 }
+
+ 
+// functions for calculating beta params
+
+double beta_hat(double N, double C, double a0) {
+  double nca = (N - C)  * a0;
+  double bhat = ( nca + C + sqrt( (nca + C)*(nca + C) - 4.0*C*nca) ) / (2.0*C);
+  return bhat;
+}
+
+double alpha_hat(double N, double C, double bhat) {
+  double cbn = (C*bhat + N);
+  double ahat = (cbn + sqrt( cbn*cbn + 4.0*C*bhat*(C-N)) ) / (2.0*(N-C));
+  return ahat;
+}
+
+double beta_nought(double N, double C) {
+  return (N + sqrt(N*N - 4.0*C*(N-C)) )/(2.0*C);
+}
+
+double alpha_nought(double N, double C, double b0) {
+  double bcn = (b0*C + N);
+  double res = ( (b0*C - C + N) + sqrt( (bcn*bcn) + 4.0*C*(C-N)*b0) ) / (2.0*(N-C));
+  return res;
+}
+
+void empirical_bayes(Dataset* ds, double* alpha, double* beta) {
+  
+  double C = 0.0;
+  double N = (double) ds->N * ds->D;
+  
+  for (int n = 0; n < ds->N; n++) {
+    for (int d = 0; d < ds->D; d++) {
+      C += at(ds, n, d);
+    }
+  }
+  
+  double b0 = beta_nought(N, C);
+  double a0 = alpha_nought(N, C, b0);
+  double bhat = beta_hat(N, C, a0);
+  double ahat = alpha_hat(N, C, bhat);
+
+  *alpha = ahat;
+  *beta = bhat;
+}
+
+
+

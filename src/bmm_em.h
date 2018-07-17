@@ -22,7 +22,7 @@ typedef struct {
 
 void free_bmm_em_result(bmm_em_result* x);
 
-bmm_em_result em(Dataset* ds, int K, int max_iter, int verbose);
+bmm_em_result em(Dataset* ds, int K, int max_iter, int verbose, int hbbmm);
 
 double clip(double x);
 
@@ -33,6 +33,8 @@ double log_z_nk(Dataset* ds, double** znk, double* pis, double** protos, int K);
 void p_k(double* pis, double** z, int K, int N);
 
 void proto_k(Dataset* ds, double** z, double* proto, int k);
+
+void proto_k_hbbmm(Dataset* ds, double** z, double* proto, int k, double alpha, double beta);
 
 double loglik(Dataset* ds, double** z, double* pis, double** protos, int K);
 
@@ -52,7 +54,15 @@ SEXP convert_bmm_em_result(Dataset* ds, bmm_em_result * res, int * prtCnt);
 
 SEXP convert_znk_result(Dataset* ds, znk_result* res, int * prtCnt);
 
+double beta_hat(double N, double C, double a0);
+
+double alpha_hat(double N, double C, double bhat);
+
+double beta_nought(double N, double C);
+
+double alpha_nought(double N, double C, double b0);
+
+void empirical_bayes(Dataset* ds, double* alpha, double* beta);
+
 #endif /* BMM_EM_H */
-
-
 
