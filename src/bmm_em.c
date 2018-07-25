@@ -28,7 +28,7 @@ bmm_em_result em(Dataset* ds, int K, int max_iter, int verbose, int hbbmm) {
   // calculate alpha and beta estimates
   double alpha, beta;
   empirical_bayes(ds, &alpha, &beta);
-  
+  Rprintf("alph=%f | beta=%f\n", alpha, beta);
 
   double thresh = 1e-6;
   int converged = 0;
@@ -192,6 +192,7 @@ double log_z_nk(Dataset* ds, double** z, double* pis, double** protos, int K) {
 
 void p_k(double* pis, double** z, int K, int N) {
   
+  #pragma omp parallel for shared(pis, z)
   for (int k = 0; k < K; k++) {
     pis[k] = 0; // reset to zero
     
@@ -230,7 +231,7 @@ void proto_k(Dataset* ds, double** z, double* proto, int k) {
 
 void proto_k_hbbmm(Dataset* ds, double** z, double* proto, int k, double alpha, double beta) {
   
-#pragma omp parallel for shared(proto, z)
+  #pragma omp parallel for shared(proto, z)
   for (int i = 0; i < ds->D; i++) {
     
     double num = 0;
@@ -395,6 +396,7 @@ znk_result predict_log_z_nk(Dataset *ds, double* pis, double** protos, int K) {
   
   double ll = 0;
   
+  #pragma omp parallel for
   for (int n = 0; n < ds->N; n++) {
     
     for (int k = 0; k < K; k++) {

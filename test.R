@@ -13,7 +13,12 @@ d <- t(images)
 d <- Matrix((d < 0) + 0L)
 z <- as(as(d, "nsparseMatrix"), "ngCMatrix")
 
-res <- BMM(z, K=10L, max.iter = 100L, verbose = 1L)
+set.seed(100)
+res1 <- BMM(z, K=10L, max.iter = 100L, verbose = 1L, hbbmm = 0L)
+
+set.seed(100)
+res2 <- BMM(z, K=10L, max.iter = 100L, verbose = 1L, hbbmm = 1L)
+
 
 z2 <- matrix(as.integer(as.matrix(d)), nrow(d), ncol(d))
 
@@ -28,7 +33,7 @@ z <- res$prototypes
 par(mfrow=c(4,3))
 par(mar=c(0,0,0,0))
 for (i in seq.int(10)) {
-  image(matrix(res$prototypes[i,], 28, 28)[,28:1], axes=F)
+  image(matrix(res2$prototypes[i,], 28, 28)[,28:1], axes=F)
 }
 par(mfrow=c(1,1))
 
@@ -271,6 +276,12 @@ r1 <- roc(titanic$Survived, z$z[,3])
 
 mod <- bin(data.frame(z$z), titanic$Survived, mono=2, min.res=10, min.cnt=25)
 
+
+
+
+
+
+### Bayes factors for cluster 1
 
 
 
