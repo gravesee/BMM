@@ -353,7 +353,7 @@ SEXP convert_bmm_em_result(Dataset* ds, bmm_em_result * res, int* prtCnt) {
    * K, D, ll?
    */ 
   
-  SEXP out = PROTECT(Rf_allocVector(VECSXP, 3));
+  SEXP out = PROTECT(Rf_allocVector(VECSXP, 4));
   (*prtCnt)++;
   
   SEXP protos = PROTECT(Rf_allocMatrix(REALSXP, ds->D, res->K));
@@ -365,6 +365,9 @@ SEXP convert_bmm_em_result(Dataset* ds, bmm_em_result * res, int* prtCnt) {
   SEXP cluster = PROTECT(Rf_allocVector(INTSXP, ds->N));
   (*prtCnt)++;
   
+  SEXP ll = PROTECT(Rf_allocVector(REALSXP, 1));
+  (*prtCnt)++;
+  
   // TODO: change iteration to avoid tranposing on back end
   // copy data to R vectors
   for (int k = 0; k < res->K; k++) {
@@ -374,16 +377,20 @@ SEXP convert_bmm_em_result(Dataset* ds, bmm_em_result * res, int* prtCnt) {
   memcpy(REAL(pis), res->pis, res->K * sizeof(double));
   memcpy(INTEGER(cluster), res->cluster, ds->N * sizeof(int));
   
-  SEXP names = PROTECT(Rf_allocVector(STRSXP, 3));
+  *REAL(ll) = res->ll;
+  
+  SEXP names = PROTECT(Rf_allocVector(STRSXP, 4));
   (*prtCnt)++;
   
   SET_VECTOR_ELT(out, 0, protos);
   SET_VECTOR_ELT(out, 1, pis);
   SET_VECTOR_ELT(out, 2, cluster);
+  SET_VECTOR_ELT(out, 3, ll);
   
   SET_STRING_ELT(names, 0, Rf_mkChar("prototypes"));
   SET_STRING_ELT(names, 1, Rf_mkChar("pis"));
   SET_STRING_ELT(names, 2, Rf_mkChar("cluster"));
+  SET_STRING_ELT(names, 3, Rf_mkChar("ll"));
   Rf_setAttrib(out, R_NamesSymbol, names);
   
   return out;

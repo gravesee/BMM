@@ -219,7 +219,7 @@ x <- t(replicate(1000, {
 
 ## Training a BMM 
 set.seed(1234)
-res <- BMM(data = x, K = 2L, max.iter = 20L, verbose = 1L)
+res <- BMM(data = x, K = 2L, max.iter = 20L, verbose = 1L, hbbmm = 1L)
 
 
 predict_dense_matrix(x, t(res$prototypes), res$pis)
