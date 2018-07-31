@@ -28,7 +28,7 @@ bmm_em_result em(Dataset* ds, int K, int max_iter, int verbose, int hbbmm) {
   // calculate alpha and beta estimates
   double alpha, beta;
   empirical_bayes(ds, &alpha, &beta);
-  Rprintf("alph=%f | beta=%f\n", alpha, beta);
+  //Rprintf("alph=%f | beta=%f\n", alpha, beta);
 
   double thresh = 1e-6;
   int converged = 0;
